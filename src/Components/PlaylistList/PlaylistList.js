@@ -17,7 +17,6 @@ class PlaylistList extends React.Component {
     componentDidMount () {
         Spotify.getUserPlaylists()
         .then(playlists => {
-            if(!Array.isArray(playlists)) return;
             this.setState({
                 playlists: playlists
             })

@@ -15,6 +15,7 @@ const Spotify = {
         const accessTokenMatch = window.location.href.match(/access_token=([^&]*)/);
         const expiresInMatch = window.location.href.match(/expires_in=([^&]*)/);
         if (accessTokenMatch && expiresInMatch) {
+            console.log('extract accessToken from url');
             accessToken = accessTokenMatch[1];
             const expiresIn = Number(expiresInMatch[1]);
             //this cleares the parameters allowing us to grab a new access token when it expires
@@ -25,17 +26,18 @@ const Spotify = {
         }
         
         if(!accessToken) {
-            const accessUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&scope=playlist-modify-public&redirect_uri=${redirectURI}`;
-            window.location = accessUrl;
+            console.log('accessToken not set, redirecting to authorize url');
+            window.location = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=token&scope=playlist-modify-public&redirect_uri=${redirectURI}`;
         }
     },
     getCurrentUserId() {
-        if(!accessToken) this.getAccessToken();
+        this.getAccessToken();
+        if(!accessToken) return;
         if(userId) {
             console.log('userId: '+ userId);
             return new Promise((resolve,reject)=> {
                 resolve(userId);
-            }) 
+            })
         }
 
         let headers = {
@@ -55,10 +57,11 @@ const Spotify = {
         .catch((error) => {
             console.error('Error:', error);
         });
-    }
+    },
     
     search (term) {
-        if(!accessToken) this.getAccessToken();
+        this.getAccessToken();
+        if(!accessToken) return;
 
         return fetch(`https://api.spotify.com/v1/search?type=track&q=${term}`,
             {
@@ -73,9 +76,9 @@ const Spotify = {
             }
             return response.json();
         })
-        .then(jsonResponse => {
-            console.log(jsonResponse);
-            return jsonResponse.tracks.items.map(track => {
+        .then(data => {
+            console.log(data);
+            return data.tracks.items.map(track => {
                 return {
                     id: track.id,
                     name: track.name,
@@ -90,6 +93,7 @@ const Spotify = {
             console.error('There has been a problem with your search fetch:', error);
         });
     },
+
     savePlaylist(playlistName, trackURIs) {
         if(!playlistName || !trackURIs) return;
         let headers = {
@@ -97,6 +101,7 @@ const Spotify = {
         };
         //if(!accessToken) this.getAccessToken();
         this.getCurrentUserId()
+        // create playlist on spotify -> returns playlistId
         .then(userId => {
             headers['Content-Type'] = 'application/json';
             return fetch(`https://api.spotify.com/v1/users/${userId}/playlists`,
@@ -114,6 +119,7 @@ const Spotify = {
             let playlistId = data.id;
             return playlistId;
         })
+        // add tracks to playlist
         .then(playlistId => {
             return fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
             {
@@ -131,33 +137,27 @@ const Spotify = {
             console.log(data);
         })
     },
-    getUserPlaylists() {
-        this.getCurrentUserId();
-        return fetch(`https://api.spotify.com/v1/users/${userId}/playlists`,
+
+    getUserPlaylists: async function () {
+        let userId = await this.getCurrentUserId();
+        let response = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`,
             {
                 headers: {
                     Authorization: `Bearer ${accessToken}`
                 }
             }
         )
-
-        .then(response => response.json())
-        .then((data) => {
-            let playlists = data.items.map(playlist => {
-                return {
-                    id: playlist.id,
-                    name: playlist.name,
-                    uri: playlist.uri
-                }
-            })
-            console.log(playlists);
-            return playlists;
+        let data = await response.json();
+        let playlists = data.items.map(playlist => {
+            return {
+                id: playlist.id,
+                name: playlist.name,
+                uri: playlist.uri
+            }
         })
-        .catch((error) => {
-            console.error('problem while getting user playlists', error);
-            return [{id:2342342342,name:'init playlist',uri:'asdflkjaslkdf'}];
-        })
-    },
+        console.log(playlists);
+        return playlists;
+    }
 };
 
 export default Spotify;
