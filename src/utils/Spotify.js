@@ -147,6 +147,7 @@ const Spotify = {
                 }
             }
         )
+        console.log(response);
         let data = await response.json();
         let playlists = data.items.map(playlist => {
             return {

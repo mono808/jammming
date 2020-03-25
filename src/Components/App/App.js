@@ -13,14 +13,16 @@ class App extends React.Component {
     this.state = {
       searchTerm: 'Enter song, album or artist',
       searchResults: [],
-      playlistName: 'monos tracks',
-      playlistTracks: []
+      playlistName: 'new playlist',
+      playlistTracks: [],
+      playlists : []
     }
     this.addTrack = this.addTrack.bind(this);
     this.removeTrack = this.removeTrack.bind(this);
     this.updatePlaylistName = this.updatePlaylistName.bind(this);
     this.savePlaylist = this.savePlaylist.bind(this);
     this.search = this.search.bind(this);
+    this.getUserPlaylists = this.getUserPlaylists.bind(this);
   }
 
   handleTermChange(newTerm) {
@@ -41,13 +43,25 @@ class App extends React.Component {
     })
   }
 
+  getUserPlaylists () {
+    Spotify.getUserPlaylists()
+    .then(playlists => {
+        this.setState({
+            playlists: playlists
+        })
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+  }
+
   savePlaylist () {
     const trackURIs = this.state.playlistTracks.map(track => {
       return track.uri
     });
     Spotify.savePlaylist(this.state.playlistName, trackURIs);
     this.setState({
-      playlistName: 'New Playlist',
+      playlistName: 'new playlist',
       playlistTracks: []
     })
   }
@@ -82,11 +96,9 @@ class App extends React.Component {
   }
 
   updatePlaylistName (newName) {
-    if(newName !== this.state.playlistName) {
-      this.setState({
-        playlistName: newName
-      })
-    }
+    this.setState({
+      playlistName: newName
+    })
   }
 
   render () {
@@ -104,7 +116,8 @@ class App extends React.Component {
               onNameChange={this.updatePlaylistName}
               onSave={this.savePlaylist}/>
           </div>
-          <PlaylistList />
+          <PlaylistList playlists={this.state.playlists}
+            getUserPlaylists={this.getUserPlaylists} />
         </div>
       </div>
     );
